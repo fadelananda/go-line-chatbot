@@ -1,4 +1,4 @@
-package healthcheck
+package api
 
 import (
 	"net/http"
@@ -8,7 +8,7 @@ import (
 
 func NewHealthCheckRouter() http.Handler {
 	r := chi.NewRouter()
-	r.Get("/readiness", broadcastLineMessageHandler)
+	r.Get("/readiness", ServerLivenessHealthcheck)
 
 	return r
 }

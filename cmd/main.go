@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/fadelananda/go-line-chatbot/internal/app/healthcheck"
+	"github.com/fadelananda/go-line-chatbot/api"
+	googlecalendar "github.com/fadelananda/go-line-chatbot/internal/app/google-calendar"
+	"github.com/fadelananda/go-line-chatbot/internal/middleware"
 	"github.com/fadelananda/go-line-chatbot/internal/utils"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
@@ -24,10 +26,13 @@ func main() {
 		AllowCredentials: false,
 		MaxAge:           300,
 	}))
+	router.Use(middleware.LogRequest)
 
 	// init router
-	readinessRouter := healthcheck.NewHealthCheckRouter()
+	readinessRouter := api.NewHealthCheckRouter()
+	googleCalendarRouter := googlecalendar.NewGoogleCalendarRouter()
 	router.Mount("/healthcheck", readinessRouter)
+	router.Mount("/", googleCalendarRouter) // google require base path :/
 
 	server := &http.Server{
 		Handler: router,
@@ -35,7 +40,7 @@ func main() {
 	}
 
 	utils.InitLogger()
-	utils.Logger.Info("Server starting at port ", port)
+	utils.LogInfo("Server starting at port 3000", nil)
 	err := server.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)

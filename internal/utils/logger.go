@@ -25,3 +25,13 @@ func LogInfo(msg string, obj map[string]interface{}) {
 	entries := logger.WithFields(loggerObj)
 	entries.Info(msg)
 }
+
+func LogError(msg string, err error, obj map[string]interface{}) {
+	loggerObj := logrus.Fields{}
+	for key, value := range obj {
+		loggerObj[key] = value
+	}
+
+	entries := logger.WithFields(loggerObj)
+	entries.Error(msg, err)
+}
