@@ -6,8 +6,10 @@ import (
 	"os"
 
 	"github.com/fadelananda/go-line-chatbot/api"
-	googlecalendar "github.com/fadelananda/go-line-chatbot/internal/app/google-calendar"
+	"github.com/fadelananda/go-line-chatbot/api/rest"
+	"github.com/fadelananda/go-line-chatbot/internal/client"
 	"github.com/fadelananda/go-line-chatbot/internal/middleware"
+	"github.com/fadelananda/go-line-chatbot/internal/service"
 	"github.com/fadelananda/go-line-chatbot/internal/utils"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
@@ -17,6 +19,22 @@ import (
 func main() {
 	godotenv.Load(".env")
 	port := os.Getenv("PORT")
+
+	// init client
+	lineClient, err := client.NewLineClient()
+	if err != nil {
+		utils.LogError("unable to initialize line bot client", err, nil)
+		os.Exit(1)
+	}
+	googleCalendarClient, err := client.NewGoogleCalendarClient()
+	if err != nil {
+		utils.LogError("unable to initialize google calendar client", err, nil)
+		os.Exit(1)
+	}
+
+	// init service
+	lineService := service.NewLineService(lineClient, googleCalendarClient)
+	googleCalendarService := service.NewGoogleService(googleCalendarClient)
 
 	router := chi.NewRouter()
 	router.Use(cors.Handler(cors.Options{
@@ -28,11 +46,13 @@ func main() {
 	}))
 	router.Use(middleware.LogRequest)
 
+	// init REST handler
+	rest.InitLineRESTHandler(router, lineService)
+	rest.InitGoogleRESTHandler(router, googleCalendarService)
+
 	// init router
 	readinessRouter := api.NewHealthCheckRouter()
-	googleCalendarRouter := googlecalendar.NewGoogleCalendarRouter()
 	router.Mount("/healthcheck", readinessRouter)
-	router.Mount("/", googleCalendarRouter) // google require base path :/
 
 	server := &http.Server{
 		Handler: router,
@@ -41,7 +61,7 @@ func main() {
 
 	utils.InitLogger()
 	utils.LogInfo("Server starting at port 3000", nil)
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)
 	}

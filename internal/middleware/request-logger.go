@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 
@@ -14,14 +15,17 @@ func LogRequest(next http.Handler) http.Handler {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		r.Body.Close()
+		defer r.Body.Close()
 
-		utils.LogInfo("Request received", map[string]interface{}{
+		utils.LogInfo("request received", map[string]interface{}{
 			"method":  r.Method,
 			"URL":     r.RequestURI,
 			"headers": r.Header,
 			"body":    requestBody,
 		})
+
+		// Restore the request body for subsequent handlers
+		r.Body = io.NopCloser(bytes.NewBuffer(requestBody))
 
 		next.ServeHTTP(w, r)
 	})
