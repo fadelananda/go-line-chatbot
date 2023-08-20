@@ -4,7 +4,6 @@ import (
 	"log"
 	"os"
 
-	lineflex "github.com/fadelananda/go-line-chatbot/templates/line-flex"
 	"github.com/line/line-bot-sdk-go/v7/linebot"
 )
 
@@ -41,8 +40,6 @@ func (client *LineClient) BroadcastTemplateMessage(templatePath string) {
 	client.lineBotClient.BroadcastMessage(linebot.NewFlexMessage("new message", flexMessage)).Do()
 }
 
-func (client *LineClient) SendTemplateMessage(userId, url string) {
-	flex1 := lineflex.NewGoogleLoginTemplate(url)
-
-	client.lineBotClient.PushMessage(userId, linebot.NewFlexMessage("new message", flex1)).Do()
+func (client *LineClient) SendTemplateMessage(userId, altText string, template linebot.FlexContainer) {
+	client.lineBotClient.PushMessage(userId, linebot.NewFlexMessage(altText, template)).Do()
 }

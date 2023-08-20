@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -52,11 +51,15 @@ func (client *GoogleCalendarClient) ExchangeOauthCode(code string) (*oauth2.Toke
 	return tok, nil
 }
 
-func (client *GoogleCalendarClient) ListEvent(tok *oauth2.Token) {
+func (client *GoogleCalendarClient) ListEvent(tok *oauth2.Token) (*calendar.Events, error) {
 	ctx := context.Background()
-	srv, err := calendar.NewService(ctx, option.WithHTTPClient(client.config.Client(context.Background(), tok)))
+	clientConf := client.config.Client(ctx, tok)
+	srv, err := calendar.NewService(ctx, option.WithHTTPClient(clientConf))
 	if err != nil {
-		log.Fatalf("Unable to retrieve Calendar client: %v", err)
+		utils.LogError("unable to retrieve calendar client", err, map[string]interface{}{
+			"token": tok,
+		})
+		return nil, err
 	}
 
 	t := time.Now().Format(time.RFC3339)
@@ -65,16 +68,6 @@ func (client *GoogleCalendarClient) ListEvent(tok *oauth2.Token) {
 	if err != nil {
 		log.Fatalf("Unable to retrieve next ten of the user's events: %v", err)
 	}
-	fmt.Println("Upcoming events:")
-	if len(events.Items) == 0 {
-		fmt.Println("No upcoming events found.")
-	} else {
-		for _, item := range events.Items {
-			date := item.Start.DateTime
-			if date == "" {
-				date = item.Start.Date
-			}
-			fmt.Printf("%v (%v)\n", item.Summary, date)
-		}
-	}
+
+	return events, nil
 }

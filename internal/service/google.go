@@ -8,12 +8,14 @@ import (
 )
 
 type GoogleService struct {
-	client *client.GoogleCalendarClient
+	gClient   *client.GoogleCalendarClient
+	awsClient *client.AWSClient
 }
 
-func NewGoogleService(client *client.GoogleCalendarClient) *GoogleService {
+func NewGoogleService(gClient *client.GoogleCalendarClient, awsClient *client.AWSClient) *GoogleService {
 	return &GoogleService{
-		client: client,
+		gClient:   gClient,
+		awsClient: awsClient,
 	}
 }
 
@@ -28,11 +30,15 @@ func (s *GoogleService) HandleOauthCallback(code, state string) error {
 		return errors.New("error when extracting line_id from claim")
 	}
 
-	token, err := s.client.ExchangeOauthCode(code)
+	token, err := s.gClient.ExchangeOauthCode(code)
 	if err != nil {
 		return errors.New("cannot exchange code for token")
 	}
 
-	s.client.ListEvent(token)
+	s.awsClient.AddUser(client.User{
+		LineId:    claims["line_id"].(string),
+		AuthToken: token,
+	})
+	s.gClient.ListEvent(token)
 	return nil
 }

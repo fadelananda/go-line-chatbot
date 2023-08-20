@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -31,10 +32,19 @@ func main() {
 		utils.LogError("unable to initialize google calendar client", err, nil)
 		os.Exit(1)
 	}
+	awsClient, err := client.NewAWSClient()
+	if err != nil {
+		utils.LogError("unable to initialize aws client", err, nil)
+		os.Exit(1)
+	}
+
+	fmt.Println(";;;;;;;;;;;;;;;")
+	fmt.Println(awsClient)
+	fmt.Println(";;;;;;;;;;;;;;;")
 
 	// init service
-	lineService := service.NewLineService(lineClient, googleCalendarClient)
-	googleCalendarService := service.NewGoogleService(googleCalendarClient)
+	lineService := service.NewLineService(lineClient, googleCalendarClient, awsClient)
+	googleCalendarService := service.NewGoogleService(googleCalendarClient, awsClient)
 
 	router := chi.NewRouter()
 	router.Use(cors.Handler(cors.Options{
