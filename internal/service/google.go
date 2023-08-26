@@ -2,20 +2,23 @@ package service
 
 import (
 	"errors"
+	"time"
 
+	"github.com/fadelananda/go-line-chatbot/entity"
 	"github.com/fadelananda/go-line-chatbot/internal/client"
+	"github.com/fadelananda/go-line-chatbot/internal/repository"
 	"github.com/fadelananda/go-line-chatbot/internal/utils"
 )
 
 type GoogleService struct {
-	gClient   *client.GoogleCalendarClient
-	awsClient *client.AWSClient
+	gClient    *client.GoogleCalendarClient
+	userStorer repository.UserStorer
 }
 
-func NewGoogleService(gClient *client.GoogleCalendarClient, awsClient *client.AWSClient) *GoogleService {
+func NewGoogleService(gClient *client.GoogleCalendarClient, userStorer repository.UserStorer) *GoogleService {
 	return &GoogleService{
-		gClient:   gClient,
-		awsClient: awsClient,
+		gClient:    gClient,
+		userStorer: userStorer,
 	}
 }
 
@@ -35,10 +38,34 @@ func (s *GoogleService) HandleOauthCallback(code, state string) error {
 		return errors.New("cannot exchange code for token")
 	}
 
-	s.awsClient.AddUser(client.User{
+	s.userStorer.AddUser(entity.User{
 		LineId:    claims["line_id"].(string),
 		AuthToken: token,
 	})
 	s.gClient.ListEvent(token)
 	return nil
+}
+
+func (s *GoogleService) ValidateOauthSession(lineId string) {
+	user, err := s.userStorer.GetUserById(lineId)
+	if err != nil {
+		// TODO: error handling
+	}
+
+	if user.AuthToken.Expiry.Before(time.Now()) {
+
+	}
+}
+
+func (s *GoogleService) RefreshGoogleOauthToken(user entity.User) {
+	newToken, err := s.gClient.RefreshOauthToken(user.AuthToken)
+	if err != nil {
+		// TODO: error handling
+	}
+
+	updateUserData := entity.User{
+		LineId:    user.LineId,
+		AuthToken: newToken,
+	}
+	s.userStorer.AddUser(updateUserData)
 }

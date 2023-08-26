@@ -43,12 +43,21 @@ func (client *GoogleCalendarClient) GenerateOauthURL(lineId string) (string, err
 }
 
 func (client *GoogleCalendarClient) ExchangeOauthCode(code string) (*oauth2.Token, error) {
-	tok, err := client.config.Exchange(context.TODO(), code)
+	tok, err := client.config.Exchange(context.TODO(), code, oauth2.AccessTypeOffline)
 	if err != nil {
 		return nil, err
 	}
 
 	return tok, nil
+}
+
+func (client *GoogleCalendarClient) RefreshOauthToken(oldToken *oauth2.Token) (*oauth2.Token, error) {
+	newToken, err := client.config.TokenSource(context.Background(), oldToken).Token()
+	if err != nil {
+		return nil, err
+	}
+
+	return newToken, nil
 }
 
 func (client *GoogleCalendarClient) ListEvent(tok *oauth2.Token) (*calendar.Events, error) {

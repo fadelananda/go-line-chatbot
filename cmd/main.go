@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -10,6 +9,7 @@ import (
 	"github.com/fadelananda/go-line-chatbot/api/rest"
 	"github.com/fadelananda/go-line-chatbot/internal/client"
 	"github.com/fadelananda/go-line-chatbot/internal/middleware"
+	"github.com/fadelananda/go-line-chatbot/internal/repository"
 	"github.com/fadelananda/go-line-chatbot/internal/service"
 	"github.com/fadelananda/go-line-chatbot/internal/utils"
 	"github.com/go-chi/chi"
@@ -38,13 +38,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Println(";;;;;;;;;;;;;;;")
-	fmt.Println(awsClient)
-	fmt.Println(";;;;;;;;;;;;;;;")
+	// init repository
+	userRepository := repository.NewUserRepository(awsClient)
 
 	// init service
 	lineService := service.NewLineService(lineClient, googleCalendarClient, awsClient)
-	googleCalendarService := service.NewGoogleService(googleCalendarClient, awsClient)
+	googleCalendarService := service.NewGoogleService(googleCalendarClient, userRepository)
 
 	router := chi.NewRouter()
 	router.Use(cors.Handler(cors.Options{

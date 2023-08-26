@@ -2,6 +2,7 @@ package lineflex
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/line/line-bot-sdk-go/v7/linebot"
 	"google.golang.org/api/calendar/v3"
@@ -30,14 +31,14 @@ func generateRowData(eventTime, eventName, meetingLink string) *linebot.BoxCompo
 						Text:        eventTime,
 						Color:       "#BBBFCA",
 						Flex:        &flex1,
-						OffsetStart: linebot.FlexComponentOffsetTypeXl,
+						OffsetStart: linebot.FlexComponentOffsetTypeMd,
 						Weight:      linebot.FlexTextWeightTypeBold,
 					},
 					&linebot.TextComponent{
 						Text:        eventName,
 						Wrap:        false,
 						Flex:        &flex4,
-						OffsetStart: linebot.FlexComponentOffsetTypeXxl,
+						OffsetStart: linebot.FlexComponentOffsetTypeXl,
 					},
 				},
 			},
@@ -57,7 +58,7 @@ func generateRowData(eventTime, eventName, meetingLink string) *linebot.BoxCompo
 						Color:       "#BBBFCA",
 						Size:        linebot.FlexTextSizeTypeSm,
 						Flex:        &flex1,
-						OffsetStart: linebot.FlexComponentOffsetTypeXl,
+						OffsetStart: linebot.FlexComponentOffsetTypeMd,
 						Weight:      linebot.FlexTextWeightTypeRegular,
 					},
 					&linebot.TextComponent{
@@ -65,7 +66,7 @@ func generateRowData(eventTime, eventName, meetingLink string) *linebot.BoxCompo
 						Wrap:        false,
 						Size:        linebot.FlexTextSizeTypeSm,
 						Flex:        &flex4,
-						OffsetStart: linebot.FlexComponentOffsetTypeXxl,
+						OffsetStart: linebot.FlexComponentOffsetTypeXl,
 					},
 				},
 			},
@@ -78,9 +79,22 @@ func NewGoogleCalendarList(date string, events *calendar.Events) *linebot.Bubble
 
 	bodyContent := []linebot.FlexComponent{}
 	for _, event := range events.Items {
+		dateTime := event.Start.DateTime
+
+		if dateTime == "" {
+			dateTime = "All Day"
+		} else {
+			parsedDateTime, err := time.Parse(time.RFC3339, dateTime)
+			if err != nil {
+				fmt.Println("Error parsing datetime:", err)
+			}
+			timeOnly := parsedDateTime.Format("15:04")
+			dateTime = timeOnly
+			fmt.Println(timeOnly)
+		}
 		fmt.Println(event.Start.DateTime)
 		fmt.Println(event.Summary)
-		row := generateRowData("asdasdasd", "event.Summary", "https://meet.google.com")
+		row := generateRowData(dateTime, event.Summary, "https://meet.google.com")
 		bodyContent = append(bodyContent, row)
 	}
 
