@@ -42,7 +42,6 @@ func (s *GoogleService) HandleOauthCallback(code, state string) error {
 		LineId:    claims["line_id"].(string),
 		AuthToken: token,
 	})
-	s.gClient.ListEvent(token)
 	return nil
 }
 

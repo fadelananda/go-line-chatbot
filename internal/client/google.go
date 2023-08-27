@@ -2,7 +2,7 @@ package client
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"os"
 	"time"
 
@@ -17,15 +17,31 @@ type GoogleCalendarClient struct {
 	config *oauth2.Config
 }
 
+type googleClientError struct {
+	FunctionName string
+	Err          error
+}
+
+func (e *googleClientError) Error() string {
+	return fmt.Sprintf("Google client error from %s, error: %v", e.FunctionName, e.Err)
+}
+
+func newGoogleClientError(functionName string, err error) *googleClientError {
+	return &googleClientError{
+		FunctionName: functionName,
+		Err:          err,
+	}
+}
+
 func NewGoogleCalendarClient() (*GoogleCalendarClient, error) {
 	b, err := os.ReadFile("credentials.json")
 	if err != nil {
-		return nil, err
+		return nil, newGoogleClientError("NewGoogleCalendarClient", err)
 	}
 
 	config, err := google.ConfigFromJSON(b, calendar.CalendarReadonlyScope)
 	if err != nil {
-		return nil, err
+		return nil, newGoogleClientError("NewGoogleCalendarClient", err)
 	}
 
 	return &GoogleCalendarClient{
@@ -36,7 +52,7 @@ func NewGoogleCalendarClient() (*GoogleCalendarClient, error) {
 func (client *GoogleCalendarClient) GenerateOauthURL(lineId string) (string, error) {
 	jwtValue, err := utils.GenerateOauthJWT(lineId)
 	if err != nil {
-		return "", err
+		return "", newGoogleClientError("GenerateOauthURL", err)
 	}
 
 	return client.config.AuthCodeURL(jwtValue, oauth2.AccessTypeOffline), nil
@@ -45,7 +61,7 @@ func (client *GoogleCalendarClient) GenerateOauthURL(lineId string) (string, err
 func (client *GoogleCalendarClient) ExchangeOauthCode(code string) (*oauth2.Token, error) {
 	tok, err := client.config.Exchange(context.TODO(), code, oauth2.AccessTypeOffline)
 	if err != nil {
-		return nil, err
+		return nil, newGoogleClientError("ExchangeOauthCode", err)
 	}
 
 	return tok, nil
@@ -54,13 +70,13 @@ func (client *GoogleCalendarClient) ExchangeOauthCode(code string) (*oauth2.Toke
 func (client *GoogleCalendarClient) RefreshOauthToken(oldToken *oauth2.Token) (*oauth2.Token, error) {
 	newToken, err := client.config.TokenSource(context.Background(), oldToken).Token()
 	if err != nil {
-		return nil, err
+		return nil, newGoogleClientError("RefreshOauthToken", err)
 	}
 
 	return newToken, nil
 }
 
-func (client *GoogleCalendarClient) ListEvent(tok *oauth2.Token) (*calendar.Events, error) {
+func (client *GoogleCalendarClient) ListEvent(tok *oauth2.Token, endTime time.Time) (*calendar.Events, error) {
 	ctx := context.Background()
 	clientConf := client.config.Client(ctx, tok)
 	srv, err := calendar.NewService(ctx, option.WithHTTPClient(clientConf))
@@ -68,14 +84,20 @@ func (client *GoogleCalendarClient) ListEvent(tok *oauth2.Token) (*calendar.Even
 		utils.LogError("unable to retrieve calendar client", err, map[string]interface{}{
 			"token": tok,
 		})
-		return nil, err
+		return nil, newGoogleClientError("ListEvent", err)
 	}
 
+	if !endTime.IsZero() {
+		utils.LogInfo("zewooo", nil)
+	}
 	t := time.Now().Format(time.RFC3339)
+	startOfDay := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Local)
+	endOfDay := startOfDay.Add(24 * time.Hour).Format(time.RFC3339)
+
 	events, err := srv.Events.List("primary").ShowDeleted(false).
-		SingleEvents(true).TimeMin(t).MaxResults(10).OrderBy("startTime").Do()
+		SingleEvents(true).TimeMin(t).TimeMax(endOfDay).MaxResults(10).OrderBy("startTime").Do()
 	if err != nil {
-		log.Fatalf("Unable to retrieve next ten of the user's events: %v", err)
+		newGoogleClientError("ListEvent", err)
 	}
 
 	return events, nil

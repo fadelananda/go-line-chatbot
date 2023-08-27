@@ -90,10 +90,7 @@ func NewGoogleCalendarList(date string, events *calendar.Events) *linebot.Bubble
 			}
 			timeOnly := parsedDateTime.Format("15:04")
 			dateTime = timeOnly
-			fmt.Println(timeOnly)
 		}
-		fmt.Println(event.Start.DateTime)
-		fmt.Println(event.Summary)
 		row := generateRowData(dateTime, event.Summary, "https://meet.google.com")
 		bodyContent = append(bodyContent, row)
 	}

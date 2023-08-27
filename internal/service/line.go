@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/fadelananda/go-line-chatbot/entity"
@@ -50,13 +49,11 @@ func (s *LineService) HandleWebhookEvents(events []*linebot.Event) {
 					if err != nil {
 					}
 
-					events, err := s.GoogleCalendarClient.ListEvent(user.AuthToken)
+					events, err := s.GoogleCalendarClient.ListEvent(user.AuthToken, time.Time{})
 					if err != nil {
 					}
 
 					calendarTemplate := lineflex.NewGoogleCalendarList("tes13", events)
-					fmt.Println("::::::")
-					fmt.Println(userId)
 					s.LineClient.SendTemplateMessage(userId, "calendar list", calendarTemplate)
 
 				case "status":
