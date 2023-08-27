@@ -8,7 +8,10 @@ import (
 	"google.golang.org/api/calendar/v3"
 )
 
-func generateRowData(eventTime, eventName, meetingLink string) *linebot.BoxComponent {
+// TODO: add feature
+// google meet link
+
+func generateRowData(eventTime, eventName, meetingLink, separatorColor string) *linebot.BoxComponent {
 	flex1 := 1
 	flex4 := 4
 
@@ -22,7 +25,7 @@ func generateRowData(eventTime, eventName, meetingLink string) *linebot.BoxCompo
 					&linebot.BoxComponent{
 						Layout:          linebot.FlexBoxLayoutTypeHorizontal,
 						Contents:        []linebot.FlexComponent{},
-						BackgroundColor: "#E8E8E8",
+						BackgroundColor: separatorColor,
 						Width:           "5px",
 						Margin:          linebot.FlexComponentMarginTypeNone,
 						Flex:            &flex1,
@@ -48,7 +51,7 @@ func generateRowData(eventTime, eventName, meetingLink string) *linebot.BoxCompo
 					&linebot.BoxComponent{
 						Layout:          linebot.FlexBoxLayoutTypeHorizontal,
 						Contents:        []linebot.FlexComponent{},
-						BackgroundColor: "#E8E8E8",
+						BackgroundColor: separatorColor,
 						Width:           "5px",
 						Margin:          linebot.FlexComponentMarginTypeNone,
 						Flex:            &flex1,
@@ -76,13 +79,22 @@ func generateRowData(eventTime, eventName, meetingLink string) *linebot.BoxCompo
 
 func NewGoogleCalendarList(date string, events *calendar.Events) *linebot.BubbleContainer {
 	flex0 := 0
+	flex1 := 1
+	flex5 := 5
+
+	defaultEventSeparatorColor := "#E8E8E8"
+	allDayEventSeparatorColor := "#EEE0C9"
+
+	var separatorColor string
 
 	bodyContent := []linebot.FlexComponent{}
 	for _, event := range events.Items {
+		separatorColor = defaultEventSeparatorColor
 		dateTime := event.Start.DateTime
 
 		if dateTime == "" {
-			dateTime = "All Day"
+			separatorColor = allDayEventSeparatorColor
+			dateTime = "*"
 		} else {
 			parsedDateTime, err := time.Parse(time.RFC3339, dateTime)
 			if err != nil {
@@ -91,9 +103,44 @@ func NewGoogleCalendarList(date string, events *calendar.Events) *linebot.Bubble
 			timeOnly := parsedDateTime.Format("15:04")
 			dateTime = timeOnly
 		}
-		row := generateRowData(dateTime, event.Summary, "https://meet.google.com")
+		row := generateRowData(dateTime, event.Summary, "https://meet.google.com", separatorColor)
 		bodyContent = append(bodyContent, row)
 	}
+
+	bodyContent = append(bodyContent, &linebot.BoxComponent{
+		Layout: linebot.FlexBoxLayoutTypeVertical,
+		Margin: linebot.FlexComponentMarginTypeXxl,
+		Contents: []linebot.FlexComponent{
+			&linebot.BoxComponent{
+				Layout: linebot.FlexBoxLayoutTypeHorizontal,
+				Contents: []linebot.FlexComponent{
+					&linebot.BoxComponent{
+						Layout:         linebot.FlexBoxLayoutTypeVertical,
+						Flex:           &flex1,
+						JustifyContent: linebot.FlexComponentJustifyContentTypeCenter,
+						Contents: []linebot.FlexComponent{
+							&linebot.BoxComponent{
+								Layout:          linebot.FlexBoxLayoutTypeVertical,
+								Contents:        []linebot.FlexComponent{},
+								BackgroundColor: allDayEventSeparatorColor,
+								Width:           "15px",
+								Height:          "15px",
+								Flex:            &flex1,
+								CornerRadius:    linebot.FlexComponentCornerRadiusTypeSm,
+							},
+						},
+					},
+					&linebot.TextComponent{
+						Text:      "All Day",
+						Flex:      &flex5,
+						Size:      linebot.FlexTextSizeTypeXs,
+						Weight:    linebot.FlexTextWeightTypeBold,
+						OffsetEnd: linebot.FlexComponentOffsetTypeXxl,
+					},
+				},
+			},
+		},
+	})
 
 	return &linebot.BubbleContainer{
 		Header: &linebot.BoxComponent{
