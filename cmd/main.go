@@ -1,9 +1,14 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/fadelananda/go-line-chatbot/api"
 	"github.com/fadelananda/go-line-chatbot/api/rest"
@@ -68,10 +73,34 @@ func main() {
 		Addr:    ":" + port,
 	}
 
+	iddleConnsClosed := make(chan struct{})
+	go func() {
+		s := make(chan os.Signal, 1)
+		signal.Notify(s, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+		<-s
+
+		utils.LogInfo("shutting down server...", nil)
+		time.Sleep(1 * time.Second)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 60&time.Second)
+		defer cancel()
+
+		if err := server.Shutdown(ctx); err != nil {
+			log.Println("err")
+		}
+
+		close(iddleConnsClosed)
+	}()
+
 	utils.InitLogger()
 	utils.LogInfo("Server starting at port 3000", nil)
 	err = server.ListenAndServe()
 	if err != nil {
-		log.Fatal(err)
+		if !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal("fatal http server failed to start:", err)
+		}
 	}
+
+	<-iddleConnsClosed
+	utils.LogInfo("server stopped", nil)
 }
