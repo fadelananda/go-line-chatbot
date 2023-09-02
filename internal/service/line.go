@@ -3,12 +3,10 @@ package service
 import (
 	"time"
 
-	"github.com/fadelananda/go-line-chatbot/entity"
 	clients "github.com/fadelananda/go-line-chatbot/internal/client"
 	"github.com/fadelananda/go-line-chatbot/internal/utils"
 	lineflex "github.com/fadelananda/go-line-chatbot/templates/line-flex"
 	"github.com/line/line-bot-sdk-go/v7/linebot"
-	"golang.org/x/oauth2"
 )
 
 type LineService struct {
@@ -26,11 +24,10 @@ func NewLineService(lineClient *clients.LineClient, googleCalendarClient *client
 }
 
 func (s *LineService) HandleWebhookEvents(events []*linebot.Event) {
-	utils.LogInfo("handle webhook events", map[string]interface{}{
+	utils.LogInfo("handling webhook events", map[string]interface{}{
 		"events": events,
 	})
 
-	// TODO: get google url
 	for _, event := range events {
 		if event.Type == linebot.EventTypeMessage {
 			switch message := event.Message.(type) {
@@ -38,7 +35,11 @@ func (s *LineService) HandleWebhookEvents(events []*linebot.Event) {
 				userId := event.Source.UserID
 
 				// parse message
+				// TODO: modularize all parsing message
 				switch message.Text {
+				case "help":
+					s.LineClient.SendTextMessage(userId, "list of commands available: \n- login \n- list \n- help")
+
 				case "login":
 					oauthURL, _ := s.GoogleCalendarClient.GenerateOauthURL(userId)
 					loginTemplate := lineflex.NewGoogleLoginTemplate(oauthURL)
@@ -56,18 +57,19 @@ func (s *LineService) HandleWebhookEvents(events []*linebot.Event) {
 					calendarTemplate := lineflex.NewGoogleCalendarList("tes13", events)
 					s.LineClient.SendTemplateMessage(userId, "calendar list", calendarTemplate)
 
+				// TODO: DETERMINE IF NEED TO HANDLE REFRESH BY OURSELF
+
 				case "status":
-					updateUser := entity.User{
-						LineId: userId,
-						Email:  "fadelananda124563@gmail.com",
-						AuthToken: &oauth2.Token{
-							Expiry:       time.Now().Add(time.Hour * 456),
-							AccessToken:  "jahahaha",
-							RefreshToken: "1//0gcgFBVOyPeSHCgYIARAAGBASNwF-L9IrcRKvkADNKk4jLrSKrQ1Niee3a94VcSEFIWHXfDlaAcjvg4cNNQJ9ZE8Wk8ZOwV-HV40",
-							TokenType:    "Bearer",
-						},
+					user, _ := s.AWSClient.GetDataByLineId("userId123123132")
+					if user.IsEmpty() {
+						oauthURL, _ := s.GoogleCalendarClient.GenerateOauthURL(userId)
+						loginTemplate := lineflex.NewGoogleLoginTemplate(oauthURL)
+						s.LineClient.SendTextMessage(userId, "You are not logged in yet, please login using the link below!")
+						s.LineClient.SendTemplateMessage(userId, "login url", loginTemplate)
+						break
 					}
-					s.AWSClient.UpdateUser(userId, updateUser)
+					template := lineflex.NewAppIntegrationStatusTemplate()
+					s.LineClient.SendTemplateMessage(userId, "status", template)
 				}
 			}
 		}

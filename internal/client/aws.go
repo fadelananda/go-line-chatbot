@@ -86,6 +86,9 @@ func (client *AWSClient) GetDataByLineId(lineId string) (entity.User, error) {
 	if err != nil {
 		return entity.User{}, newAWSClientError("GetDataByLineId", err)
 	}
+	if len(response.Item) == 0 {
+		return entity.User{}, nil
+	}
 
 	err = attributevalue.UnmarshalMap(response.Item, &user)
 	if err != nil {

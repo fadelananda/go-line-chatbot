@@ -7,3 +7,7 @@ type User struct {
 	AuthToken *oauth2.Token `dynamodbav:"auth_token"`
 	Email     string        `dynamodbav:"email"`
 }
+
+func (user User) IsEmpty() bool {
+	return user.LineId == "" && user.Email == "" && user.AuthToken == nil
+}

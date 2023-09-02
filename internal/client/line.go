@@ -40,6 +40,10 @@ func (client *LineClient) BroadcastTemplateMessage(templatePath string) {
 	client.lineBotClient.BroadcastMessage(linebot.NewFlexMessage("new message", flexMessage)).Do()
 }
 
+func (client *LineClient) SendTextMessage(userId, text string) {
+	client.lineBotClient.PushMessage(userId, linebot.NewTextMessage(text)).Do()
+}
+
 func (client *LineClient) SendTemplateMessage(userId, altText string, template linebot.FlexContainer) {
 	client.lineBotClient.PushMessage(userId, linebot.NewFlexMessage(altText, template)).Do()
 }
